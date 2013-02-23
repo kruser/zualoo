@@ -1,0 +1,17 @@
+{% extends "swf_content.html" %}
+
+{% block column2 %}
+<h2>Things to try</h2>
+<ul>
+	<li>Login to the application using your Google Accounts account (Users API)</li>
+	<li>Add and update a profile (DataStore API)</li>
+	<li>Navigate between Home and Profile and watch the Address Bar of your browser (SWFAddress)</li>
+	<li>Hit <a href="{{appUrl}}/profile" title="Initial Google App Engine {{type}} example, profile page.">the profile page directly</a>. (<em>/profile</em> automatically gets translated to SWFAddress URL, <em>#/profile</em>.)</li>
+	<li>Hit <a href="{{appUrl}}/profile" title="Initial Google App Engine {{type}} example, profile page.">the profile page directly</a> when logged out. Now login. (Intelligent redirection on login.)</li>
+	<li>Change your browser's font size up and down and watch the Flash app. (Making Flash obey browser font-size changes.)</li>
+	{% ifequal type 'Flex' %}
+	<li>Try out the mouse wheel, it works on OS X too. (ExternalMouseWheelSupport).</li>
+	<li>Upload a photo and crop it (File Upload, the new PhotoCropper component, and ByteArray).</li>
+	{% endifequal %}
+</ul>
+{% endblock %}

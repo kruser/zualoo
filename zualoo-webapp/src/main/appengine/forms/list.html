@@ -1,0 +1,40 @@
+{% extends "../templates/base.html" %}
+{%block content%}
+<p>
+	<h4 style="display: inline;">Links: </h4>
+	<a href="..">Index</a>
+	| <a href="../editor/{{model_name}}">Add</a>
+</p><br/>
+{%if entities%}
+<form action="../list/{{model_name}}" method="post">
+<table>
+	<tr class="headers">
+		<th></th>
+	{%for header in headers%}
+		<th>{{header}}</th>
+	{%endfor%}
+	</tr>
+	{%for entity in entities%}
+	<tr class="{%cycle odd,even%}">
+	    <td>
+      		<input type="radio" name="id" value="{{entity.key.id}}"
+  		{%if forloop.first%}
+        		checked="checked"
+  		{%endif%}
+        	/>
+    	</td>
+    	{%for attribute in entity.attributes%}
+		<td>{{attribute}}</td>
+		{%endfor%}
+	</tr>
+	{%endfor%}
+</table>
+<p>
+	<input type="submit" name="edit" value="Edit"/>
+	<input type="submit" name="delete" value="Delete"/>
+</p>
+</form>
+{%else%}
+No {{ model_name|lower }} exists. Please add one.
+{%endif%}
+{%endblock%}

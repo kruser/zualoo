@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas 
+	xmlns:mx="http://www.adobe.com/2006/mxml"
+	xmlns:households="name.etapic.gelt.households.*"
+	creationComplete="init()" xmlns:lists="name.etapic.gelt.lists.*"
+	xmlns:admin="name.etapic.gelt.admin.*">
+	<mx:Script>
+		<![CDATA[
+			import name.etapic.gelt.households.HouseholdMembers;
+			import name.etapic.flex.StatusIndicator;
+			import mx.managers.PopUpManager;
+			import name.etapic.gelt.households.HouseholdStores;
+			import name.etapic.flex.Model;
+		
+			private function init():void
+			{
+				StatusIndicator.status = statusBar;
+				var user:Object = Model.user;
+				userLabel.text = user._User__email;
+			}
+			
+			private function logoutButtonHandler():void
+			{
+				var url:String = Model.logoutURL;
+				getURL(url);
+			}
+			
+			private function getURL(url:String):void
+			{
+				var request:URLRequest = new URLRequest(url);
+				try 
+				{
+					navigateToURL(request, '_self');
+				} 
+				catch (e:Error) 
+				{
+					trace("Error occurred while trying to navigate to " + url);
+				}
+			}
+			
+			private function openHouseholdManager():void
+			{
+				var popup:HouseholdMembers = PopUpManager.createPopUp(this, HouseholdMembers, true) as HouseholdMembers;
+                PopUpManager.centerPopUp(popup);
+			}
+
+		]]>
+	</mx:Script>
+	<mx:VBox paddingBottom="15" paddingTop="15" paddingLeft="15" paddingRight="15" height="100%" width="100%">
+		<mx:HBox width="100%" horizontalGap="2" verticalAlign="middle">
+			<mx:Image source="@Embed('/icons/logo.jpg')"/>
+			<mx:HBox width="100%" horizontalGap="2" horizontalAlign="right" verticalAlign="middle">
+				<mx:Label id="userLabel"/>
+				<mx:VRule height="15"/>
+				<!--
+				<mx:LinkButton label="My Household" id="householdButton" click="openHouseholdManager()" toolTip="Edit details of and invite members to your household"/>
+				<mx:VRule height="15"/>
+				-->
+				<mx:LinkButton label="Logout" id="logoutButton" toolTip="Logout" click="logoutButtonHandler()"/>
+			</mx:HBox>
+		</mx:HBox>
+		<lists:Lists label="Shopping Lists" id="listsTab"/>
+	</mx:VBox>
+	<admin:Status id="statusBar" x="0" y="10" width="100%" visible="false"/>
+</mx:Canvas>

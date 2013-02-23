@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel 
+	styleName="listPanel" xmlns:mx="http://www.adobe.com/2006/mxml" 
+	layout="absolute" width="288" height="148" title="Email List"
+	initialize="init()">
+	<mx:Script>
+		<![CDATA[
+			import name.etapic.flex.services.NetConnectionElf;
+			import name.etapic.flex.Model;
+			import mx.controls.Alert;
+			import mx.managers.PopUpManager;
+			
+			private var listId:int;
+			
+			public function setListId(listId:int):void
+			{
+				this.listId = listId;
+			}
+			
+			private function init():void
+			{
+				var user:Object = Model.user;
+				address.text = user._User__email;
+				address.setFocus();
+			}
+			
+			private function sendEmail():void
+			{
+				NetConnectionElf.call('grocery.mail_list', emailListResults, {recipient:address.text, list_id:listId});
+			}
+			
+			private function emailListResults(result:Object):void
+			{
+				PopUpManager.removePopUp(this);
+			}
+		]]>
+	</mx:Script>
+	<mx:Grid x="20.5" y="28">
+		<mx:GridRow width="100%" height="100%">
+			<mx:GridItem width="100%" height="100%">
+				<mx:Label text="To:" fontWeight="bold"/>
+			</mx:GridItem>
+			<mx:GridItem width="100%" height="100%">
+				<mx:TextInput id="address" text="" width="193"/>
+			</mx:GridItem>
+		</mx:GridRow>
+	</mx:Grid>
+	<mx:ControlBar horizontalAlign="right">
+		<mx:Button id="sendButton" label="Send" click="sendEmail()"/>
+		<mx:Button label="Cancel" click="PopUpManager.removePopUp(this)"/>
+	</mx:ControlBar>
+</mx:Panel>

@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<en:BaseApplication 
+	xmlns:mx="http://www.adobe.com/2006/mxml" 
+	xmlns:en="name.etapic.flex.*" layout="absolute" 
+	xmlns:households="name.etapic.gelt.households.*"
+	xmlns:admin="name.etapic.gelt.admin.*"
+	height="100%" width="100%">
+	<mx:Style source="shopping.css" />
+		<mx:Script>
+		<![CDATA[
+			import mx.controls.Alert;
+			import mx.utils.StringUtil;
+			import mx.collections.SortField;
+			import mx.collections.Sort;
+			import name.etapic.flex.StatusIndicator;
+			import name.etapic.flex.services.NetConnectionElf;
+			import name.etapic.flex.Model;
+			
+			override protected function init(event:Event):void
+			{
+				super.init(event);
+				Model.init();
+			}
+			
+			override protected function urlInit():void
+			{
+				var baseUrl:String = getBaseUrl();
+				NetConnectionElf.call('user.login', loginResponse, baseUrl, ''); 
+			}
+			
+			private function loginResponse(result:Object):void
+			{
+				Model.userLoginResponse(result);
+				if (Model.auth)
+				{
+					var user:Object = Model.user;
+					NetConnectionElf.call('grocery.fetch', loadHousehold, 'HouseholdMember', []); 
+				}
+				else
+				{
+					currentState = 'unauthenticated';
+				}
+			}
+			
+			/**
+			 * Login if not already logged in and redirect to the main page
+			 */
+			private function getStarted():void
+			{
+				if (Model.auth)
+				{
+					currentState = 'authenticated';
+				}
+				else
+				{
+					var url:String = Model.loginURL;
+					getURL(url);
+				}
+			}
+			
+			private function loadHousehold(households:Array):void
+			{
+				if (households.length > 0)
+				{
+					Model.householdId = households[0][0];	
+					loadMyStores();
+				}
+				else
+				{
+					NetConnectionElf.call('grocery.create', householdCreated, 'Household', {name: Model.user._User__email + '\'s Household'} ); 
+				}
+			}
+			
+			private function householdCreated(householdId:int):void
+			{
+				if (Model.householdId < 0)
+				{
+					Model.householdId = householdId;
+					// TODO - the server should do this when creating a new household
+					NetConnectionElf.call('grocery.create', myselfAddedToHousehold, 'HouseholdMember', {household: Model.householdId, user:Model.user._User__email} ); 
+				}
+				else
+				{
+					currentState = 'authenticated';
+				}
+			}
+			
+			private function loadMyStores():void
+			{
+				NetConnectionElf.call('grocery.fetch', householdStoresResult, 'HouseholdStore', []); 
+				NetConnectionElf.call('grocery.fetch', loadCategories, 'StoreSection', []);
+			}
+			
+			private function loadCategories(results:Array):void
+			{
+				Model.storeSections = results;
+				Model.storeSections.sort(sortSection);
+			}
+			
+			private function sortSection(section1:Object, section2:Object):int
+			{
+				return section1[1].name.localeCompare(section2[1].name);
+			}
+			
+			private function householdStoresResult(result:Array):void
+			{
+				Model.setMyStores(result);
+				currentState = 'authenticated';
+			}
+			
+			private function myselfAddedToHousehold(householdId:int):void
+			{
+				loadMyStores();
+			}
+		]]>
+	</mx:Script>
+	<admin:LoginPage id="loginPage" height="100%" width="100%" backgroundColor="#FFFFFF"/>
+	
+	<en:states>
+		<mx:State name="unauthenticated">
+             <mx:RemoveChild target="{loginPage}" />
+             <mx:AddChild>
+				<admin:LandingPage id="landingPage" width="100%" height="100%" getStarted="getStarted"/>
+             </mx:AddChild>
+        </mx:State>
+		<mx:State name="authenticating">
+             <mx:RemoveChild target="{landingPage}" />
+             <mx:AddChild target="{loginPage}"/>
+		</mx:State>
+        <mx:State name="authenticated">
+             <mx:RemoveChild target="{loginPage}" />
+             <mx:AddChild>
+             	<admin:MainPage id="mainPage" width="100%" height="100%"/>
+             </mx:AddChild>
+        </mx:State>
+    </en:states>
+    
+</en:BaseApplication>

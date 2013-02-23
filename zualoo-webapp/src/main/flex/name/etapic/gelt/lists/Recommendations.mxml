@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:VBox xmlns:mx="http://www.adobe.com/2006/mxml" width="250" height="100%" styleName="recommendationsVbox"
+	creationComplete="init()" show="loadRecommendations()">
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.SortField;
+			import mx.collections.Sort;
+			import mx.collections.ArrayCollection;
+			import name.etapic.flex.StatusIndicator;
+			import name.etapic.flex.services.NetConnectionElf;
+			import name.etapic.flex.Model;
+			import name.etapic.gelt.lists.LabelElf;
+			
+			private var addNewItemFunction:Function;
+			private var filterItemsFunction:Function;
+			private var itemSort:Sort;
+			private static var DEFAULT_SECTION:String = 'Produce';
+			
+			[Bindable]
+			private var items:ArrayCollection;
+			
+			[Embed(source='/icons/add.png')]
+			[Bindable]
+			private var addIcon:Class;
+			
+			[Embed(source='/icons/check.png')]
+			[Bindable]
+			private var checkIcon:Class;
+			
+			private function init():void
+			{
+				itemSort = new Sort();
+                var sortByDescription:SortField = new SortField("description", true);
+                itemSort.fields = [sortByDescription];
+				for each (var section:Object in Model.storeSections)
+				{ 
+					if (section[1].name == DEFAULT_SECTION)
+					{
+						sectionCombo.selectedItem = section;
+						break;
+					}
+				}
+				loadRecommendations();
+			}
+
+			private function loadRecommendations():void
+			{
+				var storeSection:Object = sectionCombo.selectedItem;	
+				if (storeSection != null)
+				{
+					StatusIndicator.statusMessage = 'Loading ' + storeSection[1].name + '...';
+					NetConnectionElf.call('grocery.fetch', resultsFetchItemRecommendation, 'ItemRecommendation', [['StoreSection', '=', storeSection[0]]]);
+				}
+			}
+			
+			private function resultsFetchItemRecommendation(results:Array):void
+			{
+				items = new ArrayCollection();
+				items.sort = itemSort;
+				for each (var recommendation:Object in results)
+				{
+					var newRecommendation:Object = new Object();
+					newRecommendation.id = recommendation[0];	
+					newRecommendation.description = recommendation[1].description;
+					items.addItem(newRecommendation);	
+				}
+				runFilter();
+				StatusIndicator.hideStatus();
+			}
+			
+			/**
+			 * Run the filter function on demand.  To be called when the active list changes.
+			 */ 
+			public function runFilter():void
+			{
+				if (items != null)
+				{
+					var vscroll:int = itemsGrid.verticalScrollPosition;
+					for each (var recommendation:Object in items)
+					{
+						if(filterItemsFunction(recommendation))
+						{
+							recommendation.icon = addIcon;	
+							recommendation.clickable = true;
+						}
+						else
+						{
+							recommendation.icon = checkIcon;	
+							recommendation.clickable = false;
+						}
+					}
+					items.refresh();
+					itemsGrid.verticalScrollPosition = vscroll;
+				}
+			}
+			
+			/**
+			 * quick alpha sort for itemDescriptions 
+			 */
+			private function sortItems(item1:Object, item2:Object):int
+			{
+				return item1[1].description.localeCompare(item2[1].description);	
+			}
+			
+			/**
+			 * Change the combo box selection
+			 */
+			private function moveSection(movement:int):void
+			{
+				var newSpot:int = sectionCombo.selectedIndex + movement;
+				if (newSpot >= 0 && newSpot < Model.storeSections.length)
+				{
+					sectionCombo.selectedIndex = newSpot;
+					loadRecommendations();
+				}
+			}
+			
+			public function get selectionFunction():Function
+			{
+				return addNewItemFunction;
+			}
+			
+			public function set selectionFunction(value:Function):void
+			{
+				addNewItemFunction = value;
+			}
+			
+			public function get filterFunction():Function
+			{
+				return filterItemsFunction;
+			}
+			
+			public function set filterFunction(value:Function):void
+			{
+				filterItemsFunction = value;
+			}
+			
+			private function addRecommendation(event:MouseEvent):void
+			{
+				var item:Object = event.currentTarget.selectedItem;
+				if (item != null && item.clickable)
+				{
+					var vscroll:int = itemsGrid.verticalScrollPosition;
+					item.icon = checkIcon;
+					item.clickable = false;
+					items.refresh();
+					itemsGrid.verticalScrollPosition = vscroll;
+					addNewItemFunction(item.id, item.description);
+					itemsGrid.selectedIndex = -1;
+				}
+			}
+		]]>
+	</mx:Script>
+	<mx:Label text="Recommendations" styleName="header"/>
+	<mx:VBox width="100%" horizontalAlign="center" verticalAlign="bottom">
+		<mx:ComboBox id="sectionCombo" change="loadRecommendations()" dataProvider="{Model.storeSections}" labelFunction="LabelElf.storeSection"></mx:ComboBox>
+		<mx:HBox horizontalAlign="center">
+			<mx:LinkButton label="Previous" styleName="smallButton" click="moveSection(-1)"/>
+			<mx:Spacer width="30"/>
+			<mx:LinkButton label="Next" styleName="smallButton" click="moveSection(1)"/>
+		</mx:HBox>
+	</mx:VBox>
+	<mx:DataGrid id="itemsGrid" showHeaders="false" dataProvider="{items}" width="230" height="100%" selectable="true" click="addRecommendation(event)">
+		<mx:columns>
+			<mx:DataGridColumn dataField="icon" headerText="Image" width="20">
+                <mx:itemRenderer>
+                    <mx:Component>
+                        <mx:VBox width="100%" height="16" horizontalAlign="center" verticalAlign="middle">
+                            <mx:Image source="{data.icon}"/>
+                        </mx:VBox>
+                    </mx:Component>
+                </mx:itemRenderer>
+            </mx:DataGridColumn>
+			<mx:DataGridColumn dataField="description"/>
+		</mx:columns>
+	</mx:DataGrid>
+</mx:VBox>

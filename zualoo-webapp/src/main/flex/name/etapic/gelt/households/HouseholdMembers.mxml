@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel 
+	xmlns:mx="http://www.adobe.com/2006/mxml" 
+	styleName="listPanel"
+	layout="absolute" title="Household Members"
+	creationComplete="init()">
+	<mx:Script>
+		<![CDATA[
+			import mx.managers.PopUpManager;
+			import name.etapic.flex.services.NetConnectionElf;
+			import name.etapic.flex.Model;
+			import mx.controls.Alert;
+			import mx.collections.ArrayCollection;
+			
+			[Bindable]
+			private var members:ArrayCollection;
+		
+			private function init():void
+			{
+				members = new ArrayCollection();
+				NetConnectionElf.call('grocery.fetch', loadHouseholdMembers, 'HouseholdMember'); 
+			}
+			
+			private function addButtonHandler():void
+			{
+				// TODO - do this
+				Alert.show("I still gotta do this", "booyah");
+			}
+			
+			public function loadHouseholdMembers(memberArray:Array):void
+			{
+				for each (var member:Object in memberArray)
+				{
+					var newMember:Object = {id: member[0], email:member[1].user._User__email};
+					members.addItem(newMember);
+				}
+			}
+			
+		]]>
+	</mx:Script>
+	<mx:VBox paddingBottom="15" paddingTop="15" paddingLeft="15" paddingRight="15" x="0" y="0" width="100%" height="100%">		
+		<mx:DataGrid selectable="false" rowHeight="24" id="memberGrid" width="100%" showHeaders="false" dataProvider="{members}">
+			<mx:columns>
+				<mx:DataGridColumn dataField="email"/>
+			</mx:columns>
+		</mx:DataGrid>
+		<mx:HBox width="100%" horizontalAlign="right">
+			<mx:TextInput width="200" id="newMemberId" enter="addButtonHandler()"/>
+			<mx:Button id="addMemberButton" label="Invite Member" toolTip="Invite a new member to your household" click="addButtonHandler()"/>
+		</mx:HBox>
+	</mx:VBox>
+	<mx:ControlBar horizontalAlign="right">
+		<mx:Button label="Done" click="PopUpManager.removePopUp(this)"/>
+	</mx:ControlBar>
+</mx:Panel>

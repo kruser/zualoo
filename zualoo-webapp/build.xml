@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project name="gaeswf" default="build">
+
+  <property file="build.properties"/>
+  <property name="APP_ROOT" value="src/main/flex"/>
+
+  <taskdef resource="flexTasks.tasks" classpath="${FLEX_HOME}/ant/lib/flexTasks.jar"/>
+
+  <target name="build" depends="copy, mxmlc" description="copy and build flex to build folder"/>
+  
+  <target name="copy" description="copy over the files that don't need compilation">
+    <copy todir="build/gelt">
+      <fileset dir="src/main/appengine"/>
+    </copy>
+  </target>
+
+  <target name="mxmlc">
+    <mxmlc fork="true" file="${APP_ROOT}/ShoppingList.mxml" output="build/gelt/static/swf/ShoppingList.swf">
+        <!-- List of SWC files or directories that contain SWC files. -->
+        <compiler.library-path dir="" append="true">
+            <include name="libs" />
+        </compiler.library-path> 
+      	<load-config filename="${FLEX_HOME}/frameworks/flex-config.xml"/>
+      	<source-path path-element="${FLEX_HOME}/frameworks"/>
+    </mxmlc>
+  </target>
+  
+  <target name="clean" description="delete the build directory">
+    <delete dir="build"/>
+  </target>
+  
+  <target name="load" description="bulk load entities into the datastore">
+    <exec executable="python">
+      <arg value="src/test/load.py"/>
+    </exec>
+  </target>
+
+</project>

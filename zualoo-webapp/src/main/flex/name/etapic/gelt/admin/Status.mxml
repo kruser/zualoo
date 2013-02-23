@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:HBox xmlns:mx="http://www.adobe.com/2006/mxml" 
+	width="100%" horizontalAlign="center" xmlns:admin="name.etapic.gelt.admin.*">
+	<mx:HBox styleName="statusBox">
+		<mx:Label id="statusLabel" styleName="statusBox" text=""/>
+	</mx:HBox>
+</mx:HBox>

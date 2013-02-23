@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<!DOCTYPE cross-domain-policy SYSTEM "http://www.macromedia.com/xml/dtds/cross-domain-policy.dtd">
+<cross-domain-policy>
+<!-- Place top level domain name -->
+<allow-access-from domain="etapic.name" secure="false"/>
+<allow-access-from domain="etapic.name" to-ports="80,443"/>
+<allow-http-request-headers-from domain="yourdomain.com" headers="*" />
+<!-- use if you need access from subdomains. testing/www/staging.domain.com -->
+<allow-access-from domain="*.etapic.name" secure="false" />
+<allow-access-from domain="*.etapic.name" to-ports="80,443" />
+<allow-http-request-headers-from domain="*.etapic.name" headers="*" />
+</cross-domain-policy>

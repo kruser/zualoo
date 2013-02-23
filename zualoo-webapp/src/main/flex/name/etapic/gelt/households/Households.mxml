@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="100%" height="100%" xmlns:households="name.etapic.gelt.households.*">
+	<mx:Script>
+		<![CDATA[
+			import mx.core.IFlexDisplayObject;
+		]]>
+	</mx:Script>
+	
+    <mx:Blur id="blur" duration="300" 
+        blurXFrom="0.0" blurXTo="10.0" 
+        blurYFrom="0.0" blurYTo="10.0"/>
+    <mx:Blur id="unblur" duration="300" 
+        blurXFrom="10.0" blurXTo="0.0" 
+        blurYFrom="10.0" blurYTo="0.0"/>
+
+	<mx:HBox paddingBottom="15" paddingTop="15" paddingLeft="15" paddingRight="15" x="0" y="0" width="100%" height="100%">
+		<mx:VBox width="150" height="100%">
+			<mx:LinkButton icon="@Embed('/icons/group.png')" label="Members" id="memberButton" click="viewstack1.selectedChild=memberView;"/>
+			<mx:LinkButton icon="@Embed('/icons/house.png')" label="Addresses" id="addressesButton" click="viewstack1.selectedChild=addressView;"/>
+			<mx:LinkButton icon="@Embed('/icons/cart.png')" label="Stores" id="storesButton" click="viewstack1.selectedChild=storeView;"/>
+		</mx:VBox>
+		<mx:ViewStack id="viewstack1" width="100%" height="100%">
+			<households:HouseholdMembers hideEffect="{blur}" showEffect="{unblur}" id="memberView"/>
+			<households:HouseholdAddresses hideEffect="{blur}" showEffect="{unblur}" id="addressView"/>
+			<households:HouseholdStores hideEffect="{blur}" showEffect="{unblur}" id="storeView"/>
+		</mx:ViewStack>
+	</mx:HBox>
+	
+</mx:Canvas>

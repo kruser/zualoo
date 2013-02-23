@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml" 
+		layout="absolute" title="Select your favorite stores"
+		width="300" height="400"
+		initialize="loadStores()">
+	<mx:Script>
+		<![CDATA[
+			import mx.utils.StringUtil;
+			import mx.utils.ObjectProxy;
+			import mx.managers.PopUpManager;
+			import name.etapic.flex.services.NetConnectionElf;
+			import mx.collections.ArrayCollection;
+			import name.etapic.gelt.lists.LabelElf;
+			import name.etapic.flex.Model;
+			
+			[Bindable]
+			private var availableStores:ArrayCollection;
+			
+			private function loadStores():void
+			{
+				NetConnectionElf.call('grocery.fetch', storeResults, 'RetailStore', []);
+			}
+			
+			private function storeResults(stores:Array):void
+			{
+				stores.sort(sortRetailStores);
+				availableStores = new ArrayCollection();
+				availableStores.filterFunction = filterStores;
+				for each (var store:Array in stores)
+				{
+					var storeOp:ObjectProxy = new ObjectProxy();
+					storeOp.retail_store_id = store[0];	
+					storeOp.name = store[1].name;
+					storeOp.household_store_id = getHouseholdStoreId(storeOp.name);
+					storeOp.selected = new Boolean(storeOp.household_store_id > 0);
+					availableStores.addItem(storeOp);	
+				}
+			}
+			
+			private function sortRetailStores(store1:Object, store2:Object):int
+			{
+				return store1[1].name.localeCompare(store2[1].name);
+			}
+			
+			/**
+			 * Given the name of a RetailStore, find a matching household store
+			 * and return the ID of that.  If the store isn't in this user's HouseholdStore
+			 * list then return 0.
+			 */
+			private function getHouseholdStoreId(retailStoreName:String):int
+			{
+				for each (var householdStore:Array in Model.myStores)
+				{
+					if (householdStore[1].retail_store.name == retailStoreName)
+					{
+						return householdStore[0];
+					}
+				}
+				return 0;	
+			}
+			
+			public function addHouseholdStore(event:MouseEvent):void
+			{
+				var storeId:int = allStoresGrid.selectedItem[0];
+				NetConnectionElf.call('grocery.create', changeHouseholdStoreResult, 'HouseholdStore', {household: Model.householdId, retail_store:storeId} ); 
+			}
+			
+			private function changeHouseholdStoreResult(result:Object):void
+			{
+				NetConnectionElf.call('grocery.fetch', householdStoresResult, 'HouseholdStore', []); 
+			}
+			
+			private function householdStoresResult(result:Array):void
+			{
+				Model.setMyStores(result);
+				// now reset all IDs
+				for each (var store:ObjectProxy in availableStores)
+				{
+					store.household_store_id = getHouseholdStoreId(store.name);
+					store.selected = new Boolean(store.household_store_id > 0);
+				}
+			}
+			
+			private function filterStores(store:Object):Boolean
+			{
+				var filterRegex:RegExp = new RegExp('\\b' + filterTextInput.text, "i");
+				return filterRegex.test(store.name);
+			}
+			
+			public function updateStores(store:Object, checked:Boolean):void
+			{
+				store.selected = checked;		
+				if (checked)
+				{
+					NetConnectionElf.call('grocery.create', changeHouseholdStoreResult, 'HouseholdStore', {household: Model.householdId, retail_store:store.retail_store_id} ); 
+				}
+				else if (store.household_store_id > 0)
+				{
+					NetConnectionElf.call('grocery.delete', changeHouseholdStoreResult, 'HouseholdStore', store.household_store_id); 
+				}
+			}
+			
+			private function filterDataGrid():void
+			{
+				availableStores.refresh();
+			}
+			
+			/**
+			 * If this is the initial focus of the filter textInput box, 
+			 * then remove the 'filter' word.
+			 */ 
+			private function filterTextOnFocus():void
+			{
+				if (filterTextInput.text == 'filter')
+				{
+					filterTextInput.text = '';
+				}	
+			}
+			
+		]]>
+	</mx:Script>
+	<mx:VBox width="100%" height="100%" paddingBottom="10" paddingLeft="10" paddingRight="10" paddingTop="10">
+		<mx:TextInput id="filterTextInput" text="filter" change="filterDataGrid()" focusIn="filterTextOnFocus()"/>
+		<mx:DataGrid width="100%" height="100%" id="allStoresGrid" 
+			showHeaders="false" dataProvider="{availableStores}" selectable="false">
+			<mx:columns>
+				<mx:DataGridColumn width="20" editable="false" dataField="selected">
+					<mx:itemRenderer>
+      					<mx:Component>
+      						<mx:HBox horizontalAlign="center">
+         						<mx:Script>
+         							<![CDATA[
+         								import flash.sampler.DeleteObjectSample;
+         							]]>
+         						</mx:Script>
+         						<mx:CheckBox selected="{data.selected}" click="outerDocument.updateStores(data, (event.currentTarget as CheckBox).selected)" />
+      						</mx:HBox>
+      					 </mx:Component>						
+   					</mx:itemRenderer>
+				</mx:DataGridColumn>
+			<mx:DataGridColumn dataField="name"/>
+			</mx:columns>
+		</mx:DataGrid>
+	</mx:VBox>
+
+	<mx:ControlBar horizontalAlign="right">
+		<mx:Button label="Done" click="PopUpManager.removePopUp(this)"/>
+	</mx:ControlBar>
+</mx:Panel>

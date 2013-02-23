@@ -1,0 +1,9 @@
+{% extends "../templates/base.html" %}
+
+{% block content %}
+<ul>
+	{% for model in models %}
+	<li><a href="list/{{model}}">{{model}}</a></li>
+	{% endfor %}
+</ul>
+{% endblock %}

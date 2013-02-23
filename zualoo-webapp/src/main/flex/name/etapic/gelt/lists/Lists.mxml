@@ -1,0 +1,575 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas 
+	xmlns:mx="http://www.adobe.com/2006/mxml" 
+	xmlns:adobe="http://www.adobe.com/2006/fc"
+	width="100%" height="100%"
+	creationComplete="init()" 
+	xmlns:flex="name.etapic.flex.*" xmlns:lists="name.etapic.gelt.lists.*">
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.SortField;
+			import mx.collections.Sort;
+			import mx.utils.ObjectProxy;
+			import mx.events.DataGridEvent;
+			import name.etapic.flex.StatusIndicator;
+			import name.etapic.gelt.households.HouseholdStores;
+			import name.etapic.flex.printing.FormPrintView;
+			import mx.printing.FlexPrintJob;
+			import mx.core.Application;
+			import mx.managers.PopUpManager;
+			import mx.events.MenuEvent;
+			import mx.controls.Alert;
+			import mx.controls.Menu;
+			import name.etapic.flex.Model;
+			import mx.collections.ArrayCollection;
+			import name.etapic.flex.services.NetConnectionElf;
+			
+			[Bindable]
+			private var archivedLists:Array;
+			[Bindable]
+			private var possibleItems:Array;
+			[Bindable]
+			private var listItems:ArrayCollection;
+			[Bindable]
+			private var myLists:Array;
+			[Bindable]
+			private var suggestions:Array;
+			
+			private var lastTyped:String;
+			private var listSort:Sort;
+			private var sortBySection:SortField;
+			private var sortByDescription:SortField;
+			private static var MIN_SUGGEST_LEN:int = 2;
+			
+
+			/**
+			 * Check if the user has stores defined. Called on load.
+			 */
+			private function init():void
+			{
+				Model.myStoresChange = selectStore;
+				if(Model.myStores == null || Model.myStores.length < 1)
+				{
+					openStoreManager();
+				}
+				else
+				{
+					selectStore();
+				}
+				
+				listSort = new Sort();
+				sortBySection = new SortField("section", true);
+                sortByDescription = new SortField("description", true);
+                listSort.fields = [sortBySection, sortByDescription];
+                Application.application.addEventListener(KeyboardEvent.KEY_DOWN, downKeyHandler);
+			}
+			
+			/**
+			 * Selects the first store in the user's list and then
+			 * calls to load up the lists for that store.
+			 */
+			private function selectStore():void
+			{
+				if (Model.myStores.length > 0)
+                {
+                	storeList.selectedIndex = 0;
+                	loadStoreLists();
+                }
+			}
+			
+			private function downKeyHandler(event:KeyboardEvent):void
+			{
+				if (event.keyCode == 40 && suggestionMenu.visible)
+				{
+					suggestionMenu.setFocus();
+					suggestionMenu.selectedIndex = 0;
+				}	
+				else if (event.keyCode == 13 && suggestionMenu.visible && suggestionMenu.selectedItem != null)
+				{
+					menuItemChosen();
+				}
+			}
+			
+			/**
+			 * Called when enter is pressed on the newItem text input field.
+			 * Brings up the UI to create the new item if it doesn't exist as-is.
+			 */
+			private function addNewItem():void
+			{
+				if (suggestionMenu.visible && suggestionMenu.selectedItem != null)
+				{
+					menuItemChosen();
+				}
+				else
+				{
+					NetConnectionElf.call('grocery.fetch', resultsFetchSingleItemDescription, 'ItemDescription', [['description', '=', newItem.text]]);
+				}
+			}
+			
+			private function resultsFetchSingleItemDescription(item:Array):void
+			{
+				var currentList:Object = archivedListsList.selectedItem;
+				if (item.length == 0)
+				{
+            		var popup:NewListItem = PopUpManager.createPopUp(this, NewListItem, true) as NewListItem;
+            		popup.itemName.text = newItem.text;
+            		popup.setActiveList(currentList[0]);
+            		popup.addEventListener(Event.CLOSE, newItemWindowClosed);
+            		popup.selectedSection(recommendations.sectionCombo.selectedItem);
+                	PopUpManager.centerPopUp(popup);
+				}
+				else
+				{
+					NetConnectionElf.call('grocery.create', refreshListAfterChange, 'ListItem', {list:currentList[0], item_description:item[0][0], quantity:1});
+				}
+				resetTextInput();
+			}
+			
+			private function newItemWindowClosed(closeEvent:Event):void
+			{
+				loadSelectedList(false); 	
+			}
+			
+			/**
+			 * Print out the currently selected list.
+			 */
+			private function printButtonClicked():void
+			{
+            	var printJob:FlexPrintJob = new FlexPrintJob();
+            	if (printJob.start()) 
+            	{
+                	// Create a FormPrintView control as a child of the current view.
+                	var thePrintView:FormPrintView = new FormPrintView();
+               		Application.application.addChild(thePrintView);
+
+                	//Set the print view properties.
+                	thePrintView.width=printJob.pageWidth;
+                	thePrintView.height=printJob.pageHeight;
+                	thePrintView.prodTotal = listItems.length;
+                	// Set the data provider of the FormPrintView component's data grid
+                	// to be the data provider of the displayed data grid.
+                	thePrintView.myDataGrid.dataProvider = listItems;
+                	// Create a single-page image.
+                	thePrintView.showPage("single");
+                	// If the print image's data grid can hold all the provider's rows,
+                	// add the page to the print job.
+                	if(!thePrintView.myDataGrid.validNextPage)
+                	{
+                    	printJob.addObject(thePrintView);
+                	}
+                	// Otherwise, the job requires multiple pages.
+                	else
+                	{
+                 	   	// Create the first page and add it to the print job.
+                  	  	thePrintView.showPage("first");
+                   	 	printJob.addObject(thePrintView);
+                    	thePrintView.pageNumber++;
+                    	// Loop through the following code until all pages are queued.
+                    	while(true)
+                    	{
+                        	// Move the next page of data to the top of the print grid.
+                        	thePrintView.myDataGrid.nextPage();
+                        	thePrintView.showPage("last");
+                        	// If the page holds the remaining data, or if the last page
+                        	// was completely filled by the last grid data, queue it for printing.
+                        	// Test if there is data for another PrintDataGrid page.
+                        	if(!thePrintView.myDataGrid.validNextPage)
+                        	{
+                            	// This is the last page; queue it and exit the print loop.
+                            	printJob.addObject(thePrintView);
+                            	break;
+                        	}
+                        	else
+                        	// This is not the last page. Queue a middle page.
+                        	{
+                            	thePrintView.showPage("middle");
+                            	printJob.addObject(thePrintView);
+                            	thePrintView.pageNumber++;
+                        	}
+                    	}
+                	}
+                	// All pages are queued; remove the FormPrintView control to free memory.
+                	Application.application.removeChild(thePrintView);
+            	}
+            	// Send the job to the printer.
+            	printJob.send();
+   			}
+			
+			/**
+			 * Bring up the UI to email the currently selected list.
+			 */
+			private function emailButtonClicked():void
+			{
+            	var currentList:Object = archivedListsList.selectedItem;
+            	var popup:EmailList = PopUpManager.createPopUp(this, EmailList, true) as EmailList;
+            	popup.setListId(currentList[0]);
+                PopUpManager.centerPopUp(popup);
+			}
+			
+			/**
+			 * Creates a new list for the currently selected store
+			 */
+			private function createNewList():void
+			{
+				NetConnectionElf.call('grocery.create', createListResults, 'ShoppingList', {HouseholdStore: storeList.selectedItem[0]} ); 
+			}
+			
+			/**
+			 * Callback function for when a menu item is chosen from
+			 * the suggestion menu.
+			 */
+			private function menuItemChosen():void
+			{
+				var item:Object = suggestionMenu.selectedItem;
+				addItemToList(item[0], item[1].description);
+			}
+				
+			/**
+			 * Adding a specific item to the list
+			 */
+			private function addItemToList(itemId:int, itemDescription:String):void
+			{
+				var currentList:Object = archivedListsList.selectedItem;
+				NetConnectionElf.call('grocery.create', refreshListAfterChange, 'ListItem', {list:currentList[0], item_description:itemId, quantity:1});
+				StatusIndicator.statusMessage = 'Adding ' + itemDescription + '...';
+				suggestionMenu.visible = false;
+				resetTextInput();
+			}
+			
+			/**
+			 * Handed to the Recommendations so that it can filter based
+			 * on what is in the shopping list currently in view. 
+			 */
+			private function filterRecommendations(recommendation:Object):Boolean
+			{
+				if (listItems != null)
+				{
+					for each (var item:Object in listItems)
+					{
+						if (item.description == recommendation.description)
+						{
+							return false;
+						}
+					}
+				}	
+				return true;
+			}
+			
+			private function resetTextInput():void
+			{
+				newItem.text = '';
+				newItem.setFocus();
+				suggestionMenu.visible = false;
+				addNewItemButton.enabled = false;
+			}
+			
+			/**
+			 * Callback function for when items are added or removed from a list.
+			 * This function simply calls the function to reload the list. 
+			 */
+			private function refreshListAfterChange(result:Object):void
+			{
+				loadSelectedList(false);	
+			}
+			
+			/**
+			 * Loads up the list contents for whatever list is selected 
+			 */
+			private function loadSelectedList(clearListFirst:Boolean):void
+			{
+				if (clearListFirst)
+				{
+					listItems = new ArrayCollection();
+					StatusIndicator.hideStatus();
+					StatusIndicator.statusMessage = 'Loading list items...';
+				}
+				var currentList:Object = archivedListsList.selectedItem;
+				if (currentList != null)
+				{
+					NetConnectionElf.call('grocery.fetch', loadList, 'ListItem', [['list', '=', currentList[0]]]);
+					
+					if (currentList.latest != null)
+					{
+						currentState = 'READ-WRITE';
+						newItem.setFocus();
+					}
+					else
+					{
+						currentState = 'READ-ONLY';
+					}
+				}
+				else
+				{
+					currentState = 'READ-ONLY';
+				}
+				deleteButton.enabled = false;
+			}
+			
+			/**
+			 * Callback function when the contents of a list are fetched. 
+			 */
+			private function loadList(items:Array):void
+			{
+				listItems = new ArrayCollection();
+				listItems.sort = listSort;
+				for each (var listItem:Array in items)
+				{
+					var item:ObjectProxy = new ObjectProxy();
+					item.selected = new Boolean(false);
+					item.id = listItem[0];	
+					item.quantity = listItem[1].quantity;
+					item.description = listItem[1].item_description.description;
+					item.section = listItem[1].item_description.store_section.name;
+					listItems.addItem(item);	
+				}
+				listItems.refresh();
+				StatusIndicator.hideStatus();
+				recommendations.runFilter();
+			}
+			
+			/**
+			 * Called when the newItem text changes.  This method will gather
+			 * the necessary hints from the server and in-turn pop up a menu.
+			 */
+			private function itemSuggest():void
+			{
+				if (lastTyped != newItem.text)
+				{
+					lastTyped = newItem.text;
+					if (lastTyped.length > MIN_SUGGEST_LEN)
+					{
+						NetConnectionElf.call('grocery.fetch', itemHint, 'ItemDescription', [['description', 'like', lastTyped]]);
+					}
+					else
+					{
+						suggestionMenu.visible = false;
+					}
+				}
+				addNewItemButton.enabled = (newItem.text.length > 0);
+			}
+			
+			/**
+			 * Pops up a menu of list items as suggestions for what the user
+			 * may want to add to their list.
+			 */
+			private function itemHint(matches:Array):void
+			{
+				suggestions = matches.filter(filterSuggestions);
+				if (suggestions.length > 0 && newItem.text.length > MIN_SUGGEST_LEN)
+				{
+      				var point:Point = newItem.localToGlobal(new Point(0, newItem.height));
+      				var canvasPoint:Point = this.localToGlobal(new Point(0, 0));
+					suggestionMenu.x = point.x - canvasPoint.x;
+					suggestionMenu.y = point.y - canvasPoint.y;
+					suggestionMenu.visible = true;
+				}
+				else
+				{
+					suggestionMenu.visible = false;
+				}
+			}
+			
+			/**
+			 * quick filter for suggestions that don't have a word that starts with
+			 * what the user has typed in. 
+			 */
+			private function filterSuggestions(item:Object, index:int, array:Array):Boolean
+			{
+				var filterRegex:RegExp = new RegExp('\\b' + newItem.text, "i");
+				return filterRegex.test(item[1].description);
+			}
+			
+			/**
+			 * The label function for a shopping list.  Displays 'Current'
+			 * for the latest list, otherwise uses the date formatter to 
+			 * display the last updated date of the list.
+			 */
+			private function displayListDate(item:Object):String
+			{
+				if (item.latest != null && item.latest == true)
+				{
+					return 'Current';
+				}
+				else
+				{
+					var date:String = item[1].last_modified;
+					return dateFormatter.format(date);
+				}
+			}
+			
+			/**
+			 * The label function used in the popup auto completion menu
+			 */ 
+			private function hintLabel(input:Object):String
+			{
+				if (input is Array)
+				{
+					return input[1].description;	
+				}
+				else
+				{
+					return '';
+				}
+			}
+			
+			/**
+			 * Called when the selected store changes and we need
+			 * to load up the lists for that store.
+			 */
+			private function loadStoreLists():void
+			{
+				archivedLists = null;
+				var store:Object = storeList.selectedItem;
+				StatusIndicator.statusMessage = 'Loading ' + store[1].retail_store.name + ' lists...';
+				NetConnectionElf.call('grocery.fetch', fetchListsResults, 'ShoppingList', [['HouseholdStore', '=', store[0]]]);
+			}
+			
+			/**
+			 * Callback function for displaying the lists for a given store
+			 */
+			private function fetchListsResults(lists:Array):void
+			{
+				StatusIndicator.hideStatus();
+				if (lists.length > 0)
+				{
+					archivedLists = lists;
+					archivedLists[0].latest = true;
+					archivedListsList.selectedIndex = 0; // latest
+					loadSelectedList(true);
+				}
+				else
+				{
+					createNewList();
+				}
+			}
+			
+			/**
+			 * Called when a new shopping list is created.  All it
+			 * does is call the function to reload the lists for the selected store.
+			 */
+			private function createListResults(result:Object):void
+			{
+				loadStoreLists();
+			}
+			
+			/**
+			 * Called when the selected items change in the primary list
+			 */
+			private function selectionChanged():void
+			{
+				deleteButton.enabled = (currentState.valueOf() == 'READ-WRITE' && listItemsGrid.selectedItems.length > 0);
+			}
+			
+			/**
+			 * Called when the user changes the quantity of an item
+			 * in a list.
+			 */
+			private function changedQuantity(event:DataGridEvent):void 
+			{
+				var newValue:String = event.currentTarget.itemEditorInstance.text;
+				var listItem:Object = event.itemRenderer.data;
+				if (listItem.quantity != newValue)
+				{
+					listItem.quantity = newValue;
+					NetConnectionElf.call('grocery.update', null, 'ListItem', listItem.id, {quantity: newValue});
+				}
+            }
+            
+            public function openStoreManager():void
+			{
+				var popup:HouseholdStores = PopUpManager.createPopUp(this, HouseholdStores, true) as HouseholdStores;
+                PopUpManager.centerPopUp(popup);
+			}
+			
+			public function deleteItems():void
+			{
+				for each (var item:Object in listItemsGrid.selectedItems)
+				{
+					StatusIndicator.statusMessage = 'Deleting ' + item.description + '...';
+					NetConnectionElf.call('grocery.delete', refreshListAfterChange, 'ListItem', item.id);
+				}
+			}
+            
+		]]>
+	</mx:Script>
+		
+	<mx:DateFormatter id="dateFormatter" formatString="MMM DD YYYY"/>
+
+   	<mx:transitions>
+       <mx:Transition>
+            <mx:Parallel 
+              targets="{[recommendations, listVbox]}">
+                <mx:Resize duration="500"/>
+            </mx:Parallel>
+        </mx:Transition>
+    </mx:transitions>
+    
+    <mx:states>
+        <mx:State name="READ-ONLY">
+            <mx:SetProperty target="{recommendations}" name="width" value="0"/>
+            <mx:SetProperty target="{verticalSpacer}" name="width" value="0"/>
+            <mx:SetProperty target="{newItem}" name='visible' value="false"/>
+            <mx:SetProperty target="{addNewItemButton}" name='visible' value="false"/>
+            <mx:SetProperty target="{topListLabel}" name='text' value="Viewing an Archived List"/>
+            <mx:SetProperty target="{suggestionMenu}" name='visible' value="false"/>
+            <mx:SetProperty target="{listItemsGrid}" name='selectable' value="false"/>
+        </mx:State>
+        <mx:State name="READ-WRITE">
+            <mx:SetProperty target="{recommendations}" name="width" value="250"/>
+            <mx:SetProperty target="{verticalSpacer}" name="width" value="10"/>
+            <mx:SetProperty target="{newItem}" name='visible' value="true"/>
+            <mx:SetProperty target="{addNewItemButton}" name='visible' value="true"/>
+            <mx:SetProperty target="{topListLabel}" name='text' value="Find Item"/>
+            <mx:SetProperty target="{listItemsGrid}" name='selectable' value="true"/>
+        </mx:State>
+    </mx:states>
+    
+
+    
+	<mx:HBox x="0" y="0" width="100%" height="100%" horizontalGap="0">
+		<mx:VBox width="200" height="100%" paddingBottom="20">
+			<mx:HBox width="100%">
+				<mx:Label styleName="header" text="My Stores"/>
+				<mx:Button styleName="smallButton" label="Edit" id="storesButton" click="openStoreManager()" toolTip="Add to or remove the stores in your list"/>
+			</mx:HBox>
+			<mx:List styleName="storeList" id="storeList" dataProvider="{Model.myStores}" 
+				labelFunction="LabelElf.householdStoreLabel" width="100%" height="100%"
+				change="loadStoreLists()"/>
+			<mx:VBox styleName="archivedVbox" width="100%" height="200">
+				<mx:Label text="Shopping Lists" styleName="header"/>
+				<mx:List id="archivedListsList" labelFunction="displayListDate" styleName="shoppingLists"
+					dataProvider="{archivedLists}" change="loadSelectedList(true)" width="100%" height="100%"/>
+			</mx:VBox>
+		</mx:VBox>
+		<mx:VBox styleName="mainVbox" id="listVbox" minWidth="400" width="100%" height="100%">
+			<mx:HBox width="100%">
+				<mx:HBox>
+					<mx:Label id="topListLabel" text="Select a Store" width="100%"/>
+					<mx:TextInput id="newItem" visible="false" change="itemSuggest()" enter="addNewItem()"/>
+					<mx:Button id="addNewItemButton" label="Add" visible="false" enabled="false" click="addNewItem()"/>
+				</mx:HBox>
+				<mx:HBox horizontalAlign="right" width="100%">
+					<mx:Button id="newListButton" label="New List" toolTip="Create a new blank list for this store" click="createNewList()"/>
+					<mx:Button id="printButton" icon="@Embed('/icons/printer.png')" toolTip="Print this entire list" click="printButtonClicked()"/>
+					<mx:Button id="emailButton" icon="@Embed('/icons/email.png')" toolTip="Email this entire list" click="emailButtonClicked()"/>
+				</mx:HBox>
+			</mx:HBox>
+			<mx:DataGrid editable="true" id="listItemsGrid" selectable="true" allowMultipleSelection="true" 
+				width="100%" height="100%" dataProvider="{listItems}" change="selectionChanged()"
+				itemEditEnd="changedQuantity(event);">
+				<mx:columns>
+					<mx:DataGridColumn headerText="Item" editable="false" dataField="description"/>
+					<mx:DataGridColumn headerText="Section" editable="false" dataField="section"/>
+					<mx:DataGridColumn headerText="Amount" editable="true" dataField="quantity"/>
+				</mx:columns>
+			</mx:DataGrid>
+			<mx:Button id="deleteButton" label="Delete Selected" enabled="false" styleName="smallButton" click="deleteItems()"/>
+		</mx:VBox>
+		<mx:Spacer id="verticalSpacer" width="0"/>
+		<lists:Recommendations id="recommendations" width="0" selectionFunction="addItemToList" filterFunction="filterRecommendations"/>
+	</mx:HBox>
+	
+	<mx:List id="suggestionMenu" width="180" height="120" dataProvider="{suggestions}" 
+		labelFunction="hintLabel" click="menuItemChosen()" visible="false">
+    </mx:List>
+</mx:Canvas>

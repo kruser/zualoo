@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="400" height="300">
+	<mx:VBox x="0" y="0" width="100%" height="100%" verticalAlign="middle" horizontalAlign="center" id="loginButton">
+		<mx:Image source="@Embed('/icons/logo.jpg')" width="199"/>
+		<mx:ProgressBar label="Validating your Google login..." indeterminate="true"/>
+	</mx:VBox>
+</mx:Canvas>

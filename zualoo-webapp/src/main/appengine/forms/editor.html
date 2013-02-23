@@ -1,0 +1,24 @@
+{% extends "../templates/base.html" %}
+{%block content%}
+<p>
+	<h4 style="display: inline;">Links: </h4>
+	<a href="..">Index</a>
+	| <a href="../list/{{model_name}}">List</a>
+</p>
+<h3>Editor</h3>
+<form action="../editor/{{model_name}}" method="post">
+<table class="model_form">
+	{{model_form}}
+	<tr>
+		<td/>
+		<td>
+			<input type="submit" name="save" value="Save"/>
+			<input type="submit" name="cancel" value="Cancel"/>
+		</td>
+	</tr>
+</table>
+{%if id%}
+<input type="hidden" name="id" value="{{id}}"/>
+{%endif%}
+</form>
+{%endblock%}

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel 
+	styleName="listPanel" xmlns:mx="http://www.adobe.com/2006/mxml" 
+	layout="absolute" width="397" height="235" title="One-Time Categorization"
+	>
+	<mx:Script>
+		<![CDATA[
+			import name.etapic.flex.Model;
+			import name.etapic.flex.services.NetConnectionElf;
+			import mx.managers.PopUpManager;
+			
+			private var activeList:int; 
+			
+			public function setActiveList(listId:int):void
+			{
+				this.activeList	= listId;
+			}
+			
+			private function okButtonClicked():void
+			{
+				okButton.enabled = false;
+				var sectionId:int = sectionCombo.selectedItem[0];
+				NetConnectionElf.call('grocery.create', createItemResults, 'ItemDescription', {store_section:sectionId, description:wordUppercase(itemName.text), is_default:true});
+			}
+			
+			private function createItemResults(newItem:Object):void
+			{
+				NetConnectionElf.call('grocery.create', resultListItemCreate, 'ListItem', {list:activeList, item_description:newItem, quantity:1});
+			}
+			
+			private function resultListItemCreate(newListItem:Object):void
+			{
+				PopUpManager.removePopUp(this);	
+				dispatchEvent(new Event(Event.CLOSE));
+			}
+			
+			/**
+			 * Shows the section according to the incoming object
+			 */
+			public function selectedSection(section:Object):void
+			{
+				sectionCombo.selectedItem = section;
+			}
+			
+			/**
+			 * Uppercase the first letter of each word in the given string 
+			 */
+			private function wordUppercase(s:String):String 
+			{
+    			return s.replace(/\b[a-z]/g, function (m:String, ... rest):String {
+        			return m.toUpperCase();
+    			});
+			}
+			
+		]]>
+	</mx:Script>
+	<mx:VBox paddingBottom="10" paddingTop="10" paddingLeft="10" paddingRight="10" width="100%" height="100%">
+		<mx:HBox width="100%">
+			<mx:Label text="Item Name:" fontWeight="bold"/>
+			<mx:TextInput id="itemName" text=""/>
+		</mx:HBox>
+		<mx:HBox width="100%">
+				<mx:Label text="Store Section:" fontWeight="bold"/>
+				<mx:ComboBox id="sectionCombo" dataProvider="{Model.storeSections}" labelFunction="LabelElf.storeSection"></mx:ComboBox>
+		</mx:HBox>
+		<mx:Spacer height="10"/>
+		<mx:HBox width="100%" height="100%">
+			<mx:Image source="@Embed('/icons/star.png')"/>
+			<mx:TextArea borderStyle="none" width="100%" height="100%" text="This item is not yet in the Zualoo database. By assigning this item to a store section it will be added to your shopping list and also available for future lists."/>
+		</mx:HBox> 
+	</mx:VBox>
+	<mx:ControlBar horizontalAlign="right">
+		<mx:Button id="okButton" label="OK" enabled="true" click="okButtonClicked()"/>
+		<mx:Button label="Cancel" click="PopUpManager.removePopUp(this)"/>
+	</mx:ControlBar>
+</mx:Panel>

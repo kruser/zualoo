@@ -1,0 +1,157 @@
+/* CSS file 
+*
+*  COLOR SCHEME
+*   #0066B3
+*	#00487D
+*	#BFE4FF
+*	#80C9FF
+*	#FF3900
+*	#B32800
+*	#FFCEBF
+*	#FF9C80
+*	#FFB100
+*	#B37C00
+*	#FFECBF
+*	#FFD880
+*
+*/
+Button.smallButton
+{
+	fontSize: 10;
+	paddingLeft: 3;
+	paddingRight: 3;
+	paddingBottom: 0;
+	paddingTop: 0;
+}
+
+Button.bigButton
+{
+	fontSize: 18;
+	paddingLeft: 10;
+	paddingRight: 10;
+	paddingBottom: 10;
+	paddingTop: 10;
+}
+
+.header
+{
+	font-weight: bold;
+	font-size: 14;
+}
+
+DataGrid
+{
+	verticalGridLines: false;
+	horizontalGridLines: true;
+	rollOverColor: #FFECBF;
+	selectionColor: #FFECBF;
+}
+
+
+Panel
+{
+	roundedBottomCorners: true;
+	borderColor: #BFE4FF;
+}
+
+VBox.mainVbox
+{
+	backgroundColor: #BFE4FF;
+	borderThickness: 0;
+	borderStyle: solid;
+	paddingTop: 10;
+	paddingRight: 10;
+	paddingLeft: 10;
+	paddingBottom: 10;
+	corner-radius: 5;
+}
+
+VBox.tour
+{
+	borderThickness: 1;
+	borderStyle: solid;
+	paddingTop: 10;
+	paddingRight: 10;
+	paddingLeft: 10;
+	paddingBottom: 10;
+	corner-radius: 2;
+}
+
+.statusBox
+{
+	backgroundColor: #FFD880;
+	borderThickness: 0;
+	borderStyle: solid;
+	corner-radius: 3;
+	paddingLeft: 2;
+	paddingRight: 2;
+}
+
+VBox.recommendationsVbox
+{
+	backgroundColor: #FFCEBF;
+	borderThickness: 0;
+	borderStyle: solid;
+	paddingTop: 10;
+	paddingRight: 10;
+	paddingLeft: 10;
+	paddingBottom: 10;
+	corner-radius: 5;
+}
+
+VBox.archivedVbox
+{
+	backgroundColor: #BFE4FF;
+	borderThickness: 0;
+	borderStyle: solid;
+	paddingTop: 10;
+	paddingRight: 10;
+	paddingLeft: 10;
+	paddingBottom: 10;
+}
+
+List.shoppingLists
+{
+	rollOverColor: #FFECBF;
+	selectionColor: #FFECBF;
+}
+
+List.storeList
+{
+	borderThickness: 0;
+	borderColor: #BFE4FF;
+	borderStyle: solid;
+	rollOverColor: #FFECBF;
+	selectionColor: #BFE4FF;
+	text-decoration: underline;
+}
+
+.intro
+{
+	fontSize: 16;
+}
+
+.tour
+{
+	fontSize: 14;
+}
+
+.footer
+{
+	fontSize: 8;
+}
+
+Application
+{     
+	backgroundGradientColors: #ffffff, #ffffff; 
+	fontSize: 12;
+	fontFamily: arial;
+	backgroundGradientAlphas: 1.0, 1.0;
+}
+@font-face
+{
+	fontFamily: arial;
+	fontWeight: normal;
+	fontStyle: normal;
+	src: url("arial.ttf");
+}

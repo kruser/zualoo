@@ -1,0 +1,18 @@
+application: gelt
+version: 1
+runtime: python
+api_version: 1
+
+handlers:
+- url: /static
+  static_dir: static
+
+- url: /gateway
+  script: gateway.py
+
+- url: /forms/.*
+  script: forms/forms.py
+  login: admin
+
+- url: /.*
+  script: main.py

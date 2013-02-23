@@ -1,0 +1,36 @@
+h1 a:link, h1 a:visited,
+h2 a:link, h2 a:visited,
+h3 a:link, h3 a:visited,
+h4 a:link, h4 a:visited,
+h5 a:link, h5 a:visited,
+h6 a:link, h6 a:visited,
+h7 a:link, h7 a:visited,
+h8 a:link, h8 a:visited {
+	text-decoration: none;
+	color: #e9601a;
+}
+
+.hr {
+	height: 5px;
+    border-top: 1px solid #6f6f6f;
+    margin-top: .5em;
+}
+
+div#content {
+	position: relative;
+}
+
+table.model_form th {
+	text-align: right;
+	vertical-align: top;
+}
+
+ul.errorlist {
+	background: #FFD39F;
+	padding: .5em;
+	margin: 0 0 .5em 0;
+	list-style-type: none;
+	border: dashed 1px #E9601A;
+	width: 35em;
+	color: black;
+}
